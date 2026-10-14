@@ -3,49 +3,86 @@
 class Locks
 {
     public Dictionary<int, object> forkLocks = new();
+
+    public Locks(int forks = 5)
+    {
+        for (int i = 0; i < forks; i++)
+        {
+            forkLocks[i] = new object();
+        }
+    }
 }
-class Professor
+class Philosopher
 {
     int count;
     int id;
     int forkLeft;
     int forkRight;
 
-    public Professor(int in_id)
+    public Philosopher(int in_id)
     {
         count = 0;
         id = in_id;
-        if(id!=0){
-        forkLeft = id-1;
-        forkRight = id+1;
-        }
-        if(id == 0)
-        {
-    
-        }
     }
-    public void Eat(int forkLeft, int forkRight)
+
+    public void Eat()
     {
-        lock (Program.c.forkLocks[forkLeft])
+        forkLeft = id;
+        forkRight = (id + 1) % 5;
+
+        if (id < 4)
         {
-            lock (Program.c.forkLocks[forkRight])
+            while (count < 100)
             {
-                count++;
+
+                lock (Program.c.forkLocks[forkLeft])
+                {
+                    lock (Program.c.forkLocks[forkRight])
+                    {
+                        count++;
+                    }
+                }
+                Thread.Sleep(10);
             }
+            Console.WriteLine($"Philosopher {id} finished eating \n");
+        }
+        else
+        {
+            while (count < 100)
+            {
+                lock (Program.c.forkLocks[forkRight])
+                {
+                    lock (Program.c.forkLocks[forkLeft])
+                    {
+                        count++;
+                    }
+                }
+                Thread.Sleep(10);
+            }
+            Console.WriteLine($"Philosopher {id} finished eating \n");
         }
     }
-    
 }
+
 class Program
 {
     public static Locks c = new();
     static void Main(string[] args)
     {
         int forkCount = 5;
-        for(int i=0;i<forkCount;i++)
+        List<Thread> threads = new();
+
+        for (int i = 0; i < forkCount; i++)
         {
-        Professor p = new Professor(i);
+            Philosopher p = new Philosopher(i);
+            Thread t = new Thread(p.Eat);
+            threads.Add(t);
+            t.Start();
         }
-        
+
+        foreach (var t in threads)
+            t.Join();
+
+        Console.WriteLine("All Philosophers finished.\n");
     }
 }
